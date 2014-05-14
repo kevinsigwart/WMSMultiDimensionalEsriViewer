@@ -27,10 +27,11 @@ dojo.require("dijit.layout.StackContainer");
 
 
 <script type="text/javascript" src="javascript/layout.js"></script>
-
+<script type="text/javascript" src="javascript/mapping.js"></script>
 <script type="text/javascript" src="javascript/eventSlider.js"></script>
 <script type="text/javascript" src="javascript/nDimSlider.js"></script>
 <script type="text/javascript" src="javascript/WMSLayerWithTime.js"></script>
+<script type="text/javascript" src="javascript/netCDFGPQuerry.js"></script>
 
 <script type="text/javascript">     
  
@@ -64,7 +65,16 @@ dojo.addOnLoad(init);
 	<div id="timePanel" class="panel_content" data-dojo-type="dijit.layout.ContentPane" style="position:absolute;left:450px; top:25px;z-Index:999;height:25px">
 		<div id="time" style="position:center; height:25px" ></div>
 	</div>
-	
+		<div id="graphingWidget" style="position:absolute; right:110px; top:60px; z-Index:999;">
+          <div  id='graphingPane' data-dojo-type="dijit/TitlePane"data-dojo-props="title:'Graphing', closable:false,  open:false">
+            <div   id='graphingPane2'  data-dojo-type="dijit/layout/ContentPane" style="width:85px; height:30px; overflow:auto;">
+    			<button id="drawPointBtn" style="margin: 1px;width: 30px"  onmouseover="dijit.Tooltip.defaultPosition=['above', 'below']" onclick="tb.activate(esri.toolbars.Draw.POINT);" ><img src="./images/edit_markertool.png"/></button>
+    			<div class="dijitHidden"><span data-dojo-type="dijit.Tooltip" data-dojo-props="connectId:'drawPointBtn'">Plot Point</span></div>
+    			<button id="removeGraphBtn" style="margin: 1px;width: 30px"   onmouseover="dijit.Tooltip.defaultPosition=['above', 'below']" onclick="clearGraphics()"><img src="./images/edit_cancel.png"/></button>
+    			<div class="dijitHidden"><span data-dojo-type="dijit.Tooltip" data-dojo-props="connectId:'removeGraphBtn'">Delete Graph</span></div>
+            </div>
+          </div>
+    </div>
 	<div style="position:absolute; right:110px; top:20px; z-Index:997;">
           <div data-dojo-type="dijit/TitlePane" data-dojo-props="title:'Animation', closable:false,  open:false" onShow="animationShow()" onHide="animationHide()">
             <div data-dojo-type="dijit/layout/ContentPane" style="width:100px; height:30px; overflow:auto;">
@@ -92,22 +102,7 @@ dojo.addOnLoad(init);
 	</div>
 </div>
 
-    <!--Loading Panel-->
-    <div id="splashCon">
-		<div id="splashDialog">
-			<form name='addWMSForm' id='uploadZipForm' enctype='multipart/form-data' method='post'>
-				<div id="splashHeader">Add WMS Service</div>
-				<div id="splashLabel" style="margin: 7px; text-align:justify">This application will let you load and view Multi-Dimensional WMS.  The WMS must have at least one layer with dimensions.</div>
-			    <div id="helpInfo" style="margin: 7px; text-align:left;">For more information please view our <a id='helpURL' href="https://raw.github.com/esri/WMSMultiDimensionalEsriViewer/master/doc/VisMultiDimWMS.pdf">help</a>.</div>			    
-			    <input id='wmsTextInput' type="text" style="width: 95%" name="wmsTextInput" value="http://sampleserver6.arcgisonline.com/arcgis/services/MultiDimensional_Sample/MapServer/WMSServer">
-			    <button type='button' onclick="loadWMS()" style="margin:7px;">Load WMS Layers</button>
-			    <div id='layerSelector'  style="visibility: hidden">
-			   		<div id='radioButtonGroup' align="left" style="margin:5px 30px 5px 110px;max-height:150px;overflow:auto;"></div>
-			    	<button type='button' onclick="addWMSLayer()" style="margin:7px;">Add Layer</button>
-			    </div>
-			</form>
-	    </div>
-	  </div>
+
 
 </body>
 

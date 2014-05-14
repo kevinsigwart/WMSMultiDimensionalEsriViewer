@@ -8,12 +8,14 @@ dojo.require("dojo/json");
 
 //GLOBALS
   var map;
+  var wmsService = "http://dtc-sci02.esri.com/arcgis/services/201404_Multidimensional/WaterTemperature/MapServer/WMSServer";
   var eventSliderOb = null;
   var dimSliderOb = null;
-  var wmsLayer = null;
+  var esriMapOb = null;
   var timeDim = '';
   var nDim = '';
-    
+  var netCDFGPQueryOb = null;  
+
 /**
  *Fires off when the web pages is loaded 
  */  
@@ -43,118 +45,47 @@ function initMap() {
       }, "BasemapToggle");
       toggle.startup();
      });
-  	      
+    
+    document.addEventListener("WMSAddedToMapEvent",wmsLayerAddedToMap,false);  	 
+    
 	//add chrome theme for popup.  
     dojo.addClass(map.infoWindow.domNode, "chrome");    
+    
+    if(esriMapOb == null)
+		esriMapOb = new esriMap(map,wmsService);
+    
+    if(netCDFGPQueryOb == null)
+    {
+    	netCDFGPQueryOb = new NetCDFGPQuery("http://dtc-sci02.esri.com/arcgis/rest/services/201404_Multidimensional/MakeWaterTempTable/GPServer/Make%20Multidimensional%20NetCDF%20Table");
+    	document.addEventListener("NetCDFGPQueryGotQueryResults",gotNetCDFQueryResults,false);
+    }
+    
+    tb = new esri.toolbars.Draw(map);
+    dojo.connect(tb, "onDrawEnd", addGraphic);
+
+
 }
 
-/**
- *Fires off when user click the load WMS button.
- *Once clicked we parse the GetCapabilities file of the URL entered
- * for the necessary information to use for the GetMap request
- */
-function loadWMS(evt)
-{
-	//Get the URL the user added to the Form within the splash screen
-	var wmsURL = document.getElementById('wmsTextInput').value;	 
-	
-	//Remove everything after the '?' mark
-	var questIndex = wmsURL.indexOf('?');
-	if(questIndex != -1)
-	{
-		wmsURL = wmsURL.substring(0,questIndex);
-		document.getElementById('wmsTextInput').value = wmsURL;
-	}
-	
-	//We use an event listener to let us know that we have querried the getcapabilities file
-	//and parsed all the necessary information out.	 
-	wmsLayer = new WMSLayerWithTime(wmsURL);
-    document.addEventListener("WMSDimensionsLoaded",wmsLoaded,false);
+function addGraphic(geometry){
+    
+    esriMapOb.addPointToMap(geometry);
+    netCDFGPQueryOb.queryPoint(geometry);
+    
 }
 
-/**
- *Once the WMS has been parsed and ready to load we can let the user
- * know which layers and dimensions can be displayed
- */
-function wmsLoaded()
-{
-	//Set Initial Values
-	var subLayers = wmsLayer.getSubLayerWDim();
-	if(subLayers.length > 0)
-	{
-		var groupElement = document.getElementById('radioButtonGroup');
-		//Removing all old Radio Boxes
-		groupElement.innerHTML = '';
-		
-		//Adding a radio button for each layer that contains at least one dimension
-		for(layerIndex = 0; layerIndex < subLayers.length; layerIndex++)
-		{
-			var layerName = subLayers[layerIndex];
-			
-			var dimensions = wmsLayer.getDimensions(layerName);
-			
-			if(dimensions.length != 0)
-			{
-				var dimNames = "&nbsp;&nbsp;(" + dimensions.toString() + ")";
-
-				var label = document.createElement("label");
-	            var element = document.createElement("input");
-	            element.setAttribute("type", "radio");
-	            element.setAttribute("value", layerName);
-	            element.setAttribute("name", 'rbGroup');
-	            element.setAttribute("id", 'rb' + layerName);
-	            element.style = 'margin:5px;';
-	            if (layerIndex==0)
-	              element.setAttribute("checked", true);
-
-				label.appendChild(element);
-            	label.innerHTML += layerName + dimNames;
-            	label.innerHTML += '<br />';            
-            	groupElement.appendChild(label);
-           }
-		}
-		
-		//Display the layerSelector
-		var layerSelecterDiv = document.getElementById('layerSelector');
-		layerSelecterDiv.style.visibility = 'visible';
-	}
-	else
-	{
-		alert("Web Map Service loaded does not have any multi-dimensional layers contained within it.");
-	}
-}
 
 /**
  *Fired off when user clicks Add WMS Layer button  
  * Add the selected layer to the map, then add the dimensions values
  * to the charts
  */
-function addWMSLayer()
-{
-	//Get Selected Layer
-	var selLayer = '';
-	var elements = document.getElementsByName('rbGroup');
-	for(elemIndex = 0 ; elemIndex < elements.length; elemIndex++)
-	{
-		var element = elements[elemIndex];
-		if(element.checked)
-		{
-			selLayer = element.value;
-			break;
-		}
-	}
-	
-	//INitialize the WMS Layer with the default dimension values
-	wmsLayer.initializeDimensionParams(selLayer);
-	map.addLayer(wmsLayer);
-	
-    
+function wmsLayerAddedToMap()
+{	
+    var wmsLayer = esriMapOb.getWMSLayer();
     //Get Dimension Values from WMS Layer
     var dimensions = wmsLayer.getDimensions();
     
-    if(dimensions.length > 2)
-    	alert("More than two dimensions represented within WMS Service.  Only the \"time\" and one other dimension can be represented");
-    
+    //Currently only supports 2 (besides lat,lon) dimensions and one must be time/date
     timeDim = '';
     nDim = '';
     for(index = 0; index < dimensions.length; index++)
@@ -216,10 +147,6 @@ function addWMSLayer()
 	
 		//We want to make sure that the current time is shown
 	    updateMapTime();
-    
-    	//Now that the application is fully loaded, we can hide the load form.
-    	var spashConElem = document.getElementById('splashCon');
-  		domStyle.set(spashConElem, 'display', 'none');
 	});
 }
 
@@ -256,10 +183,18 @@ function updateDimension()
 {
 	//Gets the current selected dimension value from the Dimension Slider
 	var dimensionValue = dimSliderOb.getDimensionValue();
-	
+	var wmsLayer = esriMapOb.getWMSLayer();
+    
 	//Update with dimension from WMS Layer
 	wmsLayer.paramsOb[nDim] = dimensionValue.toString();
 	wmsLayer.refresh();
+    
+    //Update Time Chart
+    if(eventSliderOb.getChartMode() != "timeMode")
+    {
+        eventSliderOb.removeChart();
+        eventSliderOb.generateTimeGraph(dimensionValue);
+    }
 }
 
 function animationShow(ob)
@@ -300,14 +235,20 @@ function animationHide(ob)
   {
   	 if(eventSliderOb != null)
   	 {
-  	 	//dateTime = eventSliderOb.getDateTime();
-		var dateTimeStr = eventSliderOb.getDateTimeInitialValue();
+        var dateTimeStr= eventSliderOb.getDateTimeInitialValue();
 		
+        var wmsLayer = esriMapOb.getWMSLayer();
 		//Upate with date time parameter
 		wmsLayer.paramsOb[timeDim] = dateTimeStr;
 		wmsLayer.refresh();
 		  	 	
   	 	updateAnimationWidget(dateTimeStr);
+        
+        if(eventSliderOb.getChartMode() != "timeMode")
+        {
+            dimSliderOb.removeChart();
+            dimSliderOb.createDimensionalChart(eventSliderOb.getDateTime());
+        }
   	 }
   }
   /**
@@ -350,4 +291,36 @@ function animationPlay()
 			img.src = "./images/Button-Play-16.png";
 		
 	}
+}
+
+function gotNetCDFQueryResults()
+{
+    results = netCDFGPQueryOb.getResultsTable();
+    timeField = netCDFGPQueryOb.getTimeField();
+    valueField = netCDFGPQueryOb.getOutputValueField();
+
+    var timeExtent = map.timeExtent;
+    
+	document.getElementById('eventSliderPanel').style.height = '190px';
+    document.getElementById('timeSliderFooter').style.height = 'auto';
+    
+    document.getElementById('elevationSliderPanel').style.width = '275px';
+    document.getElementById('leftChart').style.width = 'auto';
+	//document.getElementById('panel').style.padding = '2px';
+	//document.getElementById('panel').style.paddingTop = '10px';
+    
+    //Once we have the results we want to hide the loading image.
+    //document.getElementById('loadingImg').hidden = true;
+    eventSliderOb.setTimeField(timeField);
+    eventSliderOb.setValueField(valueField);
+    eventSliderOb.setPlotTable(results[0].features);
+    eventSliderOb.removeChart();
+    eventSliderOb.generateTimeGraph("0");
+    
+    dimSliderOb.setDimensionField("depth");
+    dimSliderOb.setValueField(valueField);
+    dimSliderOb.setTable(results[0].features);
+    dimSliderOb.removeChart();
+    dimSliderOb.createDimensionalChart(eventSliderOb.getDateTime());
+    
 }

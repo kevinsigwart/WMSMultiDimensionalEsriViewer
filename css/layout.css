@@ -124,9 +124,13 @@ td {vertical-align:top;}
   		fill:white;
   		cursor:pointer;
  	}
+ 	.dsChartDot {
+  		stroke: steelblue;
+  		cursor:pointer;
+ 	}
  	.dsDot {
   		stroke: steelblue;
-  		fill:red;
+  		fill:white;
   		cursor:pointer;
  	}
  	.tsChartDot {
@@ -148,7 +152,7 @@ td {vertical-align:top;}
 	#timeSliderFooter{
       color:#334453;
       text-align:center;
-      height:55px;	
+      height:auto;	
       padding: 0px;
 	}
 
@@ -157,31 +161,10 @@ td {vertical-align:top;}
 		padding: 0px;
 	}
 	#eventSliderPanel{
-		height:45px;
+		height:50px;
 		padding-top: 8px;
 	}
-	#splashCon{
-	  position:absolute;
-	  z-index:99;
-	  width:100%;
-      top:20%;
-	  text-align:center;
-	  }
 
-	 #splashDialog{
-	  margin:auto;
-	  background-color:#dadada;
-	  width:450px;
-	  padding-bottom:5px;
-	  }
-
-	 #splashHeader{
-	  background-color:#444;
-	  color:#fff;
-	  padding-top:10px;
-	  padding-bottom:10px;
-	  width:100%;
-	  }
     #footer {
       font-size:12px;
       border:solid 1px #999;
